@@ -1,4 +1,4 @@
-# Backend Core Implementation Plan
+# ZW Casino — Backend Core Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -64,7 +64,7 @@ mkdir -p casino-backend/src/config casino-backend/src/middleware casino-backend/
 
 ```json
 {
-  "name": "casino-backend",
+  "name": "zw-casino-backend",
   "version": "1.0.0",
   "scripts": {
     "dev": "tsx watch src/index.ts",
