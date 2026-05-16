@@ -7,6 +7,7 @@ import { env } from './config/env'
 import { authLimiter, defaultLimiter } from './middleware/rateLimiter'
 import { authRouter } from './routes/auth'
 import { userRouter } from './routes/user'
+import { walletRouter } from './routes/wallet'
 
 export function createApp() {
   const app = express()
@@ -21,6 +22,7 @@ export function createApp() {
   app.get('/health', (_req, res) => res.json({ status: 'ok' }))
   app.use('/api/auth', authLimiter, authRouter)
   app.use('/api/user', userRouter)
+  app.use('/api/wallet', walletRouter)
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err)
