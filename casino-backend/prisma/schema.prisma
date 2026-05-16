@@ -101,7 +101,7 @@ model CrashBet {
   roundId   String
   betRub    Decimal    @db.Decimal(18, 2)
   cashoutAt Float?
-  profitRub Decimal    @db.Decimal(18, 2) @default(0)
+  profitRub Decimal    @default(0) @db.Decimal(18, 2)
   user      User       @relation(fields: [userId], references: [id])
   round     CrashRound @relation(fields: [roundId], references: [id])
 
