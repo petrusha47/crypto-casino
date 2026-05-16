@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String?
+  telegramId   String?  @unique
+  balanceRub   Decimal  @default(0) @db.Decimal(18, 2)
+  role         Role     @default(USER)
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  depositAddress     DepositAddress?
+  balanceTxns        BalanceTransaction[]
+  gameRounds         GameRound[]
+  withdrawalRequests WithdrawalRequest[]
+  crashBets          CrashBet[]
+
+  @@index([email])
+  @@index([telegramId])
+}
+
+model DepositAddress {
+  id           String @id @default(cuid())
+  userId       String @unique
+  trc20Address String @unique
+  encryptedKey String
+  user         User   @relation(fields: [userId], references: [id])
+}
+
+model BalanceTransaction {
+  id           String        @id @default(cuid())
+  userId       String
+  type         BalanceTxType
+  amountRub    Decimal       @db.Decimal(18, 2)
+  comment      String?
+  refId        String?
+  cbrRate      Decimal?      @db.Decimal(10, 4)
+  rateFallback Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  user         User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+}
+
+model WithdrawalRequest {
+  id           String           @id @default(cuid())
+  userId       String
+  amountRub    Decimal          @db.Decimal(18, 2)
+  trc20Address String
+  status       WithdrawalStatus @default(PENDING)
+  reviewedBy   String?
+  reviewNote   String?
+  createdAt    DateTime         @default(now())
+  reviewedAt   DateTime?
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@index([status])
+}
+
+model GameRound {
+  id             String   @id @default(cuid())
+  userId         String
+  game           GameType
+  betRub         Decimal  @db.Decimal(18, 2)
+  winRub         Decimal  @db.Decimal(18, 2)
+  serverSeedHash String
+  serverSeed     String?
+  clientSeed     String
+  nonce          Int
+  result         Json
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([game])
+}
+
+model CrashRound {
+  id         String     @id @default(cuid())
+  hash       String     @unique
+  crashPoint Float
+  startedAt  DateTime
+  crashedAt  DateTime?
+  bets       CrashBet[]
+}
+
+model CrashBet {
+  id        String     @id @default(cuid())
+  userId    String
+  roundId   String
+  betRub    Decimal    @db.Decimal(18, 2)
+  cashoutAt Float?
+  profitRub Decimal    @db.Decimal(18, 2) @default(0)
+  user      User       @relation(fields: [userId], references: [id])
+  round     CrashRound @relation(fields: [roundId], references: [id])
+
+  @@index([userId])
+  @@index([roundId])
+}
+
+model PokerTable {
+  id         String      @id @default(cuid())
+  name       String
+  maxPlayers Int         @default(6)
+  minBetRub  Decimal     @db.Decimal(18, 2)
+  maxBetRub  Decimal     @db.Decimal(18, 2)
+  rake       Float       @default(0.05)
+  status     TableStatus @default(WAITING)
+}
+
+enum Role {
+  USER
+  SUPPORT
+  ADMIN
+}
+
+enum GameType {
+  SLOTS
+  ROULETTE
+  BLACKJACK
+}
+
+enum BalanceTxType {
+  DEPOSIT
+  ADMIN_CREDIT
+  ADMIN_DEBIT
+  GAME_WIN
+  GAME_LOSS
+  WITHDRAWAL
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TableStatus {
+  WAITING
+  ACTIVE
+  FINISHED
+}
