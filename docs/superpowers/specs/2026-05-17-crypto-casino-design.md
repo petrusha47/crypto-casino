@@ -63,7 +63,7 @@
 1. Пользователь создаёт `WithdrawalRequest` (сумма RUB, TRC20 адрес для вывода)
 2. Статус: `PENDING` → `APPROVED` / `REJECTED`
 3. Саппорт/Админ в панели видит очередь, подтверждает вручную
-4. При подтверждении: баланс списывается, USDT отправляется на адрес пользователя (или вручную)
+4. При подтверждении: баланс списывается — саппорт вручную отправляет USDT на указанный адрес из горячего кошелька казино
 
 ---
 
@@ -104,6 +104,7 @@ model BalanceTransaction {
   comment     String?
   refId       String?             // txHash или gameRound.id
   cbrRate     Decimal?            @db.Decimal(10,4)  // курс ЦБ на момент депозита
+  rateFallback Boolean            @default(false)    // true если ЦБ был недоступен
   createdAt   DateTime            @default(now())
   user        User                @relation(fields: [userId], references: [id])
 }
@@ -164,6 +165,8 @@ model PokerTable {
   maxBetRub   Decimal     @db.Decimal(18,2)
   rake        Float       @default(0.05)  // 5%
   status      TableStatus @default(WAITING)
+  // Полное состояние стола (карты, ходы, банк, места игроков) хранится в Redis
+  // ключ: poker:table:{id} — TTL не ставится, очищается при завершении раунда
 }
 
 enum Role             { USER SUPPORT ADMIN }
@@ -311,7 +314,7 @@ GET  /api/admin/stats
 - Недостаточно баланса → 402 с сообщением
 - Неверный JWT → 401, клиент перенаправляется на /auth/login
 - TronGrid недоступен → депозит остаётся PENDING, повторная проверка через 60 сек
-- ЦБ недоступен → используется последний кэшированный курс, транзакция помечается флагом `rate_fallback: true`
+- ЦБ недоступен → используется последний кэшированный курс, транзакция помечается `rateFallback: true` в `BalanceTransaction`
 - Все ошибки серверной игровой логики → раунд откатывается, баланс не меняется
 
 ---
