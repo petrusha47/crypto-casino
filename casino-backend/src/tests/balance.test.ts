@@ -7,10 +7,11 @@ import { Decimal } from '@prisma/client/runtime/library'
 let userId: string
 
 beforeEach(async () => {
+  const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const user = await prisma.user.create({
     data: {
-      email: `bal-${Date.now()}@test.casino`,
-      username: `baltest${Date.now()}`,
+      email: `bal-${uid}@test.casino`,
+      username: `bt${uid}`,
       balanceRub: new Decimal(0),
     },
   })
