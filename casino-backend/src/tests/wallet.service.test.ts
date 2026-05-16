@@ -18,6 +18,10 @@ describe('encryptPrivateKey / decryptPrivateKey', () => {
     const key = 'c'.repeat(64)
     expect(encryptPrivateKey(key)).not.toBe(encryptPrivateKey(key))
   })
+
+  it('throws when decrypting corrupted data', () => {
+    expect(() => decryptPrivateKey('bm90YmFzZTY0Y3J5cHRv')).toThrow('Failed to decrypt private key')
+  })
 })
 
 describe('isValidTRC20Address', () => {
