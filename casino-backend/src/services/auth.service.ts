@@ -28,10 +28,22 @@ export function signRefreshToken(payload: TokenPayload): string {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES })
 }
 
+function assertTokenPayload(decoded: unknown): TokenPayload {
+  if (
+    typeof decoded !== 'object' ||
+    decoded === null ||
+    typeof (decoded as Record<string, unknown>).userId !== 'string' ||
+    typeof (decoded as Record<string, unknown>).role !== 'string'
+  ) {
+    throw new Error('Invalid token payload')
+  }
+  return decoded as TokenPayload
+}
+
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload
+  return assertTokenPayload(jwt.verify(token, env.JWT_ACCESS_SECRET))
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload
+  return assertTokenPayload(jwt.verify(token, env.JWT_REFRESH_SECRET))
 }

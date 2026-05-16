@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hashPassword, verifyPassword, signAccessToken, signRefreshToken, verifyAccessToken } from '../services/auth.service'
+import { hashPassword, verifyPassword, signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../services/auth.service'
 
 describe('hashPassword', () => {
   it('returns a hash different from the input', async () => {
@@ -34,5 +34,21 @@ describe('JWT', () => {
   it('verifyAccessToken throws on tampered token', () => {
     const token = signAccessToken(payload)
     expect(() => verifyAccessToken(token + 'x')).toThrow()
+  })
+})
+
+describe('refresh token', () => {
+  const payload = { userId: 'cltest456', role: 'USER' as const }
+
+  it('refresh token encodes and verifies userId', () => {
+    const token = signRefreshToken(payload)
+    const decoded = verifyRefreshToken(token)
+    expect(decoded.userId).toBe('cltest456')
+    expect(decoded.role).toBe('USER')
+  })
+
+  it('verifyRefreshToken throws on tampered token', () => {
+    const token = signRefreshToken(payload)
+    expect(() => verifyRefreshToken(token + 'x')).toThrow()
   })
 })

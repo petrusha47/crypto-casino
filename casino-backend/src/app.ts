@@ -4,7 +4,7 @@ import cors from 'cors'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import { env } from './config/env'
-import { defaultLimiter } from './middleware/rateLimiter'
+import { authLimiter, defaultLimiter } from './middleware/rateLimiter'
 import { authRouter } from './routes/auth'
 import { userRouter } from './routes/user'
 
@@ -19,7 +19,7 @@ export function createApp() {
   app.use(defaultLimiter)
 
   app.get('/health', (_req, res) => res.json({ status: 'ok' }))
-  app.use('/api/auth', authRouter)
+  app.use('/api/auth', authLimiter, authRouter)
   app.use('/api/user', userRouter)
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
