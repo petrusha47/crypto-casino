@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "paths": {}
+    "paths": {},
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

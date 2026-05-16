@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
+    "@types/cookie-parser": "^1.4.10",
     "bcrypt": "^5.1.1",
     "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
