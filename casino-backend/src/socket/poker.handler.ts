@@ -15,10 +15,15 @@ import {
 
 const ACTION_TIMEOUT_MS = 30_000
 
+const userSocketMap = new Map<string, string>() // userId → socketId
+
 export function registerPokerHandler(io: Server): void {
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.user?.userId as string | undefined
     if (!userId) return
+
+    userSocketMap.set(userId, socket.id)
+    socket.on('disconnect', () => userSocketMap.delete(userId))
 
     socket.on('poker:join', async ({ tableId }: { tableId: string }) => {
       try {
@@ -66,7 +71,13 @@ export function registerPokerHandler(io: Server): void {
           socket.emit('poker:error', { message: 'No active hand' }); return
         }
 
-        state = applyAction(state, userId, action as any)
+        const VALID_ACTIONS = ['fold', 'check', 'call', 'raise', 'allin']
+        if (!VALID_ACTIONS.includes(action.type)) {
+          socket.emit('poker:error', { message: 'Invalid action type' })
+          return
+        }
+
+        state = applyAction(state, userId, action as { type: 'fold' | 'check' | 'call' | 'raise' | 'allin'; amount?: number })
 
         if (state.phase === 'showdown') {
           const results = resolveShowdown(state)
@@ -122,9 +133,15 @@ async function saveTableState(tableId: string, state: PokerTableState): Promise<
 }
 
 function broadcastState(io: Server, tableId: string, state: PokerTableState): void {
+  // Send each player their private view (with their own hole cards)
   for (const player of state.players) {
-    io.to(`poker:${tableId}`).emit('poker:state', sanitizeState(state, player.userId))
+    const socketId = userSocketMap.get(player.userId)
+    if (socketId) {
+      io.to(socketId).emit('poker:state', sanitizeState(state, player.userId))
+    }
   }
+  // Send all spectators/others in room the fully hidden view
+  io.to(`poker:${tableId}`).emit('poker:state', sanitizeState(state, ''))
 }
 
 function sanitizeState(state: PokerTableState, viewerUserId: string) {

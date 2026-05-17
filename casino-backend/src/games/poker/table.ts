@@ -190,6 +190,11 @@ function advanceTurn(state: PokerTableState): PokerTableState {
     attempts++
   }
 
+  // If no eligible player found (all folded or all-in), advance the phase
+  if (state.players[next].folded || state.players[next].allIn) {
+    return advancePhase(state)
+  }
+
   return { ...state, currentPlayerIdx: next }
 }
 
