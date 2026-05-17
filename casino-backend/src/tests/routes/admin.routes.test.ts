@@ -83,3 +83,129 @@ describe('GET /api/admin/stats', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('GET /api/admin/users', () => {
+  it('SUPPORT can list users', async () => {
+    const res = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${supportToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ users: expect.any(Array), total: expect.any(Number), page: 1, pageSize: 20 })
+  })
+
+  it('USER gets 403', async () => {
+    const res = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${userToken}`)
+    expect(res.status).toBe(403)
+  })
+
+  it('search by username returns matching users', async () => {
+    const res = await request(app)
+      .get('/api/admin/users?search=adm')
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.users.some((u: { username: string }) => u.username.includes('adm'))).toBe(true)
+  })
+})
+
+describe('GET /api/admin/users/:id', () => {
+  it('returns user detail with recentTxns', async () => {
+    const res = await request(app)
+      .get(`/api/admin/users/${adminUserId}`)
+      .set('Authorization', `Bearer ${supportToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.user.id).toBe(adminUserId)
+    expect(res.body.recentTxns).toBeInstanceOf(Array)
+  })
+
+  it('returns 404 for unknown id', async () => {
+    const res = await request(app)
+      .get('/api/admin/users/nonexistent-id')
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('PATCH /api/admin/users/:id/ban', () => {
+  it('ADMIN can ban a user', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${adminUserId}/ban`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isBanned: true })
+    expect(res.status).toBe(200)
+    expect(res.body.user.isBanned).toBe(true)
+  })
+
+  it('SUPPORT gets 403 on ban', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${adminUserId}/ban`)
+      .set('Authorization', `Bearer ${supportToken}`)
+      .send({ isBanned: true })
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('PATCH /api/admin/users/:id/role', () => {
+  it('ADMIN can change role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${adminUserId}/role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'SUPPORT' })
+    expect(res.status).toBe(200)
+    expect(res.body.user.role).toBe('SUPPORT')
+  })
+
+  it('returns 400 for invalid role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${adminUserId}/role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'SUPERADMIN' })
+    expect(res.status).toBe(400)
+  })
+})
+
+describe('POST /api/admin/users/:id/credit', () => {
+  it('ADMIN can credit balance', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${adminUserId}/credit`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ amountRub: 500, comment: 'Test credit' })
+    expect(res.status).toBe(200)
+    const user = await prisma.user.findUnique({ where: { id: adminUserId } })
+    expect(Number(user!.balanceRub)).toBe(500)
+  })
+
+  it('returns 400 for non-positive amount', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${adminUserId}/credit`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ amountRub: 0 })
+    expect(res.status).toBe(400)
+  })
+
+  it('SUPPORT gets 403 on credit', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${adminUserId}/credit`)
+      .set('Authorization', `Bearer ${supportToken}`)
+      .send({ amountRub: 100 })
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('POST /api/admin/users/:id/debit', () => {
+  it('ADMIN can debit balance', async () => {
+    await prisma.user.update({ where: { id: adminUserId }, data: { balanceRub: 1000 } })
+    const res = await request(app)
+      .post(`/api/admin/users/${adminUserId}/debit`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ amountRub: 300 })
+    expect(res.status).toBe(200)
+    const user = await prisma.user.findUnique({ where: { id: adminUserId } })
+    expect(Number(user!.balanceRub)).toBe(700)
+  })
+
+  it('returns 400 when balance insufficient', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${adminUserId}/debit`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ amountRub: 99999 })
+    expect(res.status).toBe(400)
+  })
+})
