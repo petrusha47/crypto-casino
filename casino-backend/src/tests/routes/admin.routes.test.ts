@@ -286,3 +286,70 @@ describe('PATCH /api/admin/withdrawals/:id/review', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('Poker table CRUD', () => {
+  it('ADMIN can create a table', async () => {
+    const res = await request(app)
+      .post('/api/admin/tables')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Test Table', minBetRub: 100, maxBetRub: 5000, maxPlayers: 6, rake: 0.05 })
+    expect(res.status).toBe(201)
+    expect(res.body.table.name).toBe('Test Table')
+  })
+
+  it('SUPPORT gets 403 on table create', async () => {
+    const res = await request(app)
+      .post('/api/admin/tables')
+      .set('Authorization', `Bearer ${supportToken}`)
+      .send({ name: 'X', minBetRub: 100, maxBetRub: 1000, maxPlayers: 6, rake: 0.05 })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 400 when minBetRub > maxBetRub', async () => {
+    const res = await request(app)
+      .post('/api/admin/tables')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Bad', minBetRub: 5000, maxBetRub: 100, maxPlayers: 6, rake: 0.05 })
+    expect(res.status).toBe(400)
+  })
+
+  it('ADMIN can list tables', async () => {
+    const res = await request(app)
+      .get('/api/admin/tables')
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.tables).toBeInstanceOf(Array)
+  })
+
+  it('ADMIN can update a table', async () => {
+    const create = await request(app)
+      .post('/api/admin/tables')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Edit Me', minBetRub: 100, maxBetRub: 1000, maxPlayers: 4, rake: 0.05 })
+    const id = create.body.table.id
+
+    const res = await request(app)
+      .patch(`/api/admin/tables/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Updated', maxPlayers: 6 })
+    expect(res.status).toBe(200)
+    expect(res.body.table.name).toBe('Updated')
+    expect(res.body.table.maxPlayers).toBe(6)
+  })
+
+  it('ADMIN can delete a table', async () => {
+    const create = await request(app)
+      .post('/api/admin/tables')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Delete Me', minBetRub: 100, maxBetRub: 1000, maxPlayers: 6, rake: 0.05 })
+    const id = create.body.table.id
+
+    const res = await request(app)
+      .delete(`/api/admin/tables/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+    expect(res.status).toBe(204)
+
+    const check = await prisma.pokerTable.findUnique({ where: { id } })
+    expect(check).toBeNull()
+  })
+})

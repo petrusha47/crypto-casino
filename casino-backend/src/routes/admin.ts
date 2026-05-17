@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { Role, WithdrawalStatus, BalanceTxType } from '@prisma/client'
+import { Role, WithdrawalStatus, BalanceTxType, TableStatus } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../config/prisma'
 import { requireRole } from '../middleware/admin'
@@ -235,6 +235,72 @@ adminRouter.patch('/withdrawals/:id/review', requireRole(...ADMIN_SUPPORT), asyn
     res.json({ withdrawal: { ...withdrawal, amountRub: Number(withdrawal.amountRub) } })
   } catch (err) {
     console.error('Admin withdrawal review error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+const tableSchema = z.object({
+  name: z.string().min(1).max(50),
+  minBetRub: z.number().positive(),
+  maxBetRub: z.number().positive(),
+  maxPlayers: z.number().int().min(2).max(9),
+  rake: z.number().min(0).max(0.1),
+})
+
+// GET /api/admin/tables — ADMIN only
+adminRouter.get('/tables', requireRole(...ADMIN_ONLY), async (_req, res) => {
+  try {
+    const tables = await prisma.pokerTable.findMany({ orderBy: { id: 'asc' } })
+    res.json({ tables: tables.map(t => ({ ...t, minBetRub: Number(t.minBetRub), maxBetRub: Number(t.maxBetRub) })) })
+  } catch (err) {
+    console.error('Admin tables list error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/tables — ADMIN only
+adminRouter.post('/tables', requireRole(...ADMIN_ONLY), async (req, res) => {
+  try {
+    const parsed = tableSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+
+    const { name, minBetRub, maxBetRub, maxPlayers, rake } = parsed.data
+    if (minBetRub > maxBetRub) return res.status(400).json({ error: 'minBetRub must be ≤ maxBetRub' })
+
+    const table = await prisma.pokerTable.create({
+      data: { name, minBetRub, maxBetRub, maxPlayers, rake, status: TableStatus.WAITING },
+    })
+    res.status(201).json({ table: { ...table, minBetRub: Number(table.minBetRub), maxBetRub: Number(table.maxBetRub) } })
+  } catch (err) {
+    console.error('Admin table create error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/admin/tables/:id — ADMIN only
+adminRouter.patch('/tables/:id', requireRole(...ADMIN_ONLY), async (req, res) => {
+  try {
+    const parsed = tableSchema.partial().safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+
+    const table = await prisma.pokerTable.update({
+      where: { id: req.params.id },
+      data: parsed.data,
+    })
+    res.json({ table: { ...table, minBetRub: Number(table.minBetRub), maxBetRub: Number(table.maxBetRub) } })
+  } catch (err) {
+    console.error('Admin table update error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// DELETE /api/admin/tables/:id — ADMIN only
+adminRouter.delete('/tables/:id', requireRole(...ADMIN_ONLY), async (req, res) => {
+  try {
+    await prisma.pokerTable.delete({ where: { id: req.params.id } })
+    res.status(204).send()
+  } catch (err) {
+    console.error('Admin table delete error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
