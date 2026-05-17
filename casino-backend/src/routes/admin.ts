@@ -182,3 +182,59 @@ adminRouter.post('/users/:id/debit', requireRole(...ADMIN_ONLY), async (req, res
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+// GET /api/admin/withdrawals?status=PENDING — ADMIN + SUPPORT
+adminRouter.get('/withdrawals', requireRole(...ADMIN_SUPPORT), async (req, res) => {
+  try {
+    const statusParam = (req.query.status as string | undefined) ?? 'PENDING'
+    const where = statusParam === 'ALL' ? {} : { status: statusParam as WithdrawalStatus }
+
+    const withdrawals = await prisma.withdrawalRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { username: true, email: true } } },
+    })
+
+    res.json({
+      withdrawals: withdrawals.map(w => ({
+        ...w,
+        amountRub: Number(w.amountRub),
+      })),
+    })
+  } catch (err) {
+    console.error('Admin withdrawals list error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+const reviewSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('approve'), reviewNote: z.string().optional() }),
+  z.object({ action: z.literal('reject'), reviewNote: z.string().min(1) }),
+])
+
+// PATCH /api/admin/withdrawals/:id/review — ADMIN + SUPPORT
+adminRouter.patch('/withdrawals/:id/review', requireRole(...ADMIN_SUPPORT), async (req, res) => {
+  try {
+    const parsed = reviewSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+
+    const { action, reviewNote } = parsed.data
+    const status = action === 'approve' ? WithdrawalStatus.APPROVED : WithdrawalStatus.REJECTED
+
+    const withdrawal = await prisma.withdrawalRequest.update({
+      where: { id: req.params.id },
+      data: {
+        status,
+        reviewedBy: req.user!.userId,
+        reviewNote: reviewNote ?? null,
+        reviewedAt: new Date(),
+      },
+      select: { id: true, status: true, reviewedBy: true, reviewNote: true, reviewedAt: true, amountRub: true, trc20Address: true },
+    })
+
+    res.json({ withdrawal: { ...withdrawal, amountRub: Number(withdrawal.amountRub) } })
+  } catch (err) {
+    console.error('Admin withdrawal review error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

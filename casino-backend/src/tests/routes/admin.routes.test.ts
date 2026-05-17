@@ -209,3 +209,80 @@ describe('POST /api/admin/users/:id/debit', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('GET /api/admin/withdrawals', () => {
+  it('SUPPORT can list withdrawals', async () => {
+    const res = await request(app)
+      .get('/api/admin/withdrawals')
+      .set('Authorization', `Bearer ${supportToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.withdrawals).toBeInstanceOf(Array)
+  })
+
+  it('filters by status=ALL', async () => {
+    const res = await request(app)
+      .get('/api/admin/withdrawals?status=ALL')
+      .set('Authorization', `Bearer ${supportToken}`)
+    expect(res.status).toBe(200)
+  })
+
+  it('USER gets 403', async () => {
+    const res = await request(app)
+      .get('/api/admin/withdrawals')
+      .set('Authorization', `Bearer ${userToken}`)
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('PATCH /api/admin/withdrawals/:id/review', () => {
+  let withdrawalId: string
+
+  beforeEach(async () => {
+    const uid = `${Date.now()}${Math.random().toString(36).slice(2, 5)}`
+    const reg = await request(app).post('/api/auth/register').send({
+      email: `wd${uid}@a.test`, username: `wdU${uid}`.slice(0, 20), password: 'Password1!',
+    })
+    const wdUserId = reg.body.user.id
+    await prisma.user.update({ where: { id: wdUserId }, data: { balanceRub: 5000 } })
+    const wd = await prisma.withdrawalRequest.create({
+      data: { userId: wdUserId, amountRub: 1000, trc20Address: 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9' },
+    })
+    withdrawalId = wd.id
+  })
+
+  it('ADMIN can approve withdrawal', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/withdrawals/${withdrawalId}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ action: 'approve' })
+    expect(res.status).toBe(200)
+    expect(res.body.withdrawal.status).toBe('APPROVED')
+    expect(res.body.withdrawal.reviewedBy).toBe(adminUserId)
+  })
+
+  it('SUPPORT can reject withdrawal with note', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/withdrawals/${withdrawalId}/review`)
+      .set('Authorization', `Bearer ${supportToken}`)
+      .send({ action: 'reject', reviewNote: 'Invalid address' })
+    expect(res.status).toBe(200)
+    expect(res.body.withdrawal.status).toBe('REJECTED')
+    expect(res.body.withdrawal.reviewNote).toBe('Invalid address')
+  })
+
+  it('returns 400 when rejecting without reviewNote', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/withdrawals/${withdrawalId}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ action: 'reject' })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 for invalid action', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/withdrawals/${withdrawalId}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ action: 'delete' })
+    expect(res.status).toBe(400)
+  })
+})
