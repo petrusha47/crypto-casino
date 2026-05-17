@@ -62,8 +62,8 @@ export function compareHands(a: HandRank, b: HandRank): number {
 export function evaluateBest5of7(cards: number[]): HandRank {
   let best: HandRank = { rank: -1, tiebreakers: [] }
   // Try all C(7,2)=21 combinations (exclude 2 cards, evaluate remaining 5)
-  for (let i = 0; i < 7; i++) {
-    for (let j = i + 1; j < 7; j++) {
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
       const hand5 = cards.filter((_, idx) => idx !== i && idx !== j)
       const hr = evaluate5(hand5)
       if (compareHands(hr, best) > 0) best = hr
