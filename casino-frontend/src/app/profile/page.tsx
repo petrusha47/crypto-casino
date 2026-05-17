@@ -39,7 +39,7 @@ export default function ProfilePage() {
   }, [])
 
   const verify = () => {
-    if (!verifySeed || !verifyClient || !verifyNonce) return
+    if (!verifyHash || !verifySeed || !verifyClient || !verifyNonce) return
     setVerifyResult(
       `HMAC-SHA256(serverSeed="${verifySeed}", message="${verifyClient}:${verifyNonce}") → compare with server result`,
     )
@@ -56,7 +56,7 @@ export default function ProfilePage() {
         <div className="card">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-casino-purple/20 border border-casino-purple flex items-center justify-center text-2xl">
-              {user.username[0].toUpperCase()}
+              {(user.username[0] ?? '?').toUpperCase()}
             </div>
             <div>
               <p className="text-xl font-bold text-white">{user.username}</p>

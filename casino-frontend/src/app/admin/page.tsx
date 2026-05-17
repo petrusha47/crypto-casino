@@ -11,6 +11,8 @@ export default function AdminPage() {
     if (user && user.role === 'USER') router.push('/')
   }, [user, router])
 
+  if (!user || user.role === 'USER') return null
+
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold neon-text-purple mb-8 text-center">🔧 ADMIN PANEL</h1>
