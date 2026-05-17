@@ -71,10 +71,14 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
   const credit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await api.post(`/api/admin/users/${id}/credit`, { amountRub: Number(creditAmount), comment: creditComment || undefined })
-    flash(`Зачислено ${creditAmount} ₽`)
-    setCreditAmount(''); setCreditComment('')
-    load()
+    try {
+      await api.post(`/api/admin/users/${id}/credit`, { amountRub: Number(creditAmount), comment: creditComment || undefined })
+      flash(`Зачислено ${creditAmount} ₽`)
+      setCreditAmount(''); setCreditComment('')
+      load()
+    } catch (err) {
+      if (axios.isAxiosError(err)) setError(err.response?.data?.error ?? 'Ошибка')
+    }
   }
 
   const debit = async (e: React.FormEvent) => {

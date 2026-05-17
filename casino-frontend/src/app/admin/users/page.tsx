@@ -41,7 +41,7 @@ export default function AdminUsersPage() {
     return () => controller.abort()
   }, [page, debouncedSearch])
 
-  useEffect(() => { loadUsers() }, [loadUsers])
+  useEffect(() => loadUsers(), [loadUsers])
 
   const totalPages = Math.ceil(total / 20)
 
