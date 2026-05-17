@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #050510;
+  color: #e0e0ff;
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 100vh;
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2 bg-casino-purple text-white font-bold rounded border border-casino-purple
+           hover:shadow-glow-purple hover:scale-105 transition-all duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none;
+  }
+  .btn-cyan {
+    @apply px-6 py-2 bg-transparent text-casino-cyan font-bold rounded border border-casino-cyan
+           hover:bg-casino-cyan hover:text-casino-bg hover:shadow-glow-cyan transition-all duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply px-6 py-2 bg-red-600 text-white font-bold rounded border border-red-500
+           hover:bg-red-500 transition-all duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .card {
+    @apply bg-casino-dark border border-casino-border rounded-xl p-6;
+  }
+  .input-field {
+    @apply w-full bg-casino-bg border border-casino-border rounded-lg px-4 py-2
+           text-white placeholder-gray-500 focus:outline-none focus:border-casino-purple
+           transition-all duration-200;
+  }
+  .neon-text-cyan {
+    @apply text-casino-cyan;
+    text-shadow: 0 0 10px #00f5ff, 0 0 20px #00f5ff44;
+  }
+  .neon-text-purple {
+    @apply text-casino-purple;
+    text-shadow: 0 0 10px #7b2fff, 0 0 20px #7b2fff44;
+  }
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a1a; }
+::-webkit-scrollbar-thumb { background: #7b2fff; border-radius: 3px; }
