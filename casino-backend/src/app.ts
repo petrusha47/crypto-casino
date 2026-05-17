@@ -8,6 +8,7 @@ import { authLimiter, defaultLimiter } from './middleware/rateLimiter'
 import { authRouter } from './routes/auth'
 import { userRouter } from './routes/user'
 import { walletRouter } from './routes/wallet'
+import { gamesRouter } from './routes/games'
 
 export function createApp() {
   const app = express()
@@ -23,6 +24,7 @@ export function createApp() {
   app.use('/api/auth', authLimiter, authRouter)
   app.use('/api/user', userRouter)
   app.use('/api/wallet', walletRouter)
+  app.use('/api/games', gamesRouter)
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err)
