@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 import api from '@/lib/api'
 import { BalanceTransaction } from '@/types'
 
@@ -15,12 +16,15 @@ const TYPE_LABEL: Record<BalanceTransaction['type'], string> = {
 export default function TransactionList() {
   const [txns, setTxns] = useState<BalanceTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState('')
 
   useEffect(() => {
-    api.get<BalanceTransaction[]>('/api/wallet/transactions')
+    const controller = new AbortController()
+    api.get<BalanceTransaction[]>('/api/wallet/transactions', { signal: controller.signal })
       .then((r) => setTxns(r.data))
-      .catch(() => setTxns([]))
+      .catch((err) => { if (!axios.isCancel(err)) setFetchError('Не удалось загрузить историю') })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   return (
@@ -28,6 +32,8 @@ export default function TransactionList() {
       <h2 className="text-lg font-bold text-white mb-4">История транзакций</h2>
       {loading ? (
         <p className="text-gray-400">Загрузка...</p>
+      ) : fetchError ? (
+        <p className="text-red-400 text-sm">{fetchError}</p>
       ) : txns.length === 0 ? (
         <p className="text-gray-500">Нет транзакций</p>
       ) : (
