@@ -83,9 +83,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
     })
 
     socket.on('poker:your_turn', (data: { userId: string; timeoutAt: number }) => {
-      if (data.userId === user?.id) {
-        setTurnTimeout(data.timeoutAt)
-      }
+      setTurnTimeout(data.timeoutAt)
     })
 
     return () => {
@@ -93,7 +91,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
       socket.off('poker:error')
       socket.off('poker:your_turn')
     }
-  }, [getAccessToken, user?.id])
+  }, [getAccessToken])
 
   // Countdown
   useEffect(() => {
@@ -120,6 +118,9 @@ export default function PokerTable({ tableId }: { tableId: string }) {
   const leaveTable = () => {
     if (socketRef.current) {
       socketRef.current.emit('poker:leave', { tableId })
+      socketRef.current.off('poker:state')
+      socketRef.current.off('poker:error')
+      socketRef.current.off('poker:your_turn')
     }
     fetchBalance()
     router.push('/games/poker')
@@ -146,7 +147,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
             </span>
           )}
         </div>
-        <button onClick={leaveTable} className="btn-danger text-sm py-1 px-3">Выйти</button>
+        {joined && <button onClick={leaveTable} className="btn-danger text-sm py-1 px-3">Выйти</button>}
       </div>
 
       {/* Community cards */}
