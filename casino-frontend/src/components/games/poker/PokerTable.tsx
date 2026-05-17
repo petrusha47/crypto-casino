@@ -60,9 +60,9 @@ export default function PokerTable({ tableId }: { tableId: string }) {
   const socketRef = useRef<Socket | null>(null)
 
   const [tableState, setTableState] = useState<TableState | null>(null)
-  const [joined, setJoined] = useState(false)
   const [raiseAmount, setRaiseAmount] = useState(0)
   const [error, setError] = useState('')
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [turnTimeout, setTurnTimeout] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
 
@@ -78,8 +78,9 @@ export default function PokerTable({ tableId }: { tableId: string }) {
     })
 
     socket.on('poker:error', (data: { message: string }) => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
       setError(data.message)
-      setTimeout(() => setError(''), 4000)
+      errorTimerRef.current = setTimeout(() => setError(''), 4000)
     })
 
     socket.on('poker:your_turn', (data: { userId: string; timeoutAt: number }) => {
@@ -90,6 +91,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
       socket.off('poker:state')
       socket.off('poker:error')
       socket.off('poker:your_turn')
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
     }
   }, [getAccessToken])
 
@@ -107,7 +109,6 @@ export default function PokerTable({ tableId }: { tableId: string }) {
   const joinTable = useCallback(() => {
     if (!socketRef.current) return
     socketRef.current.emit('poker:join', { tableId })
-    setJoined(true)
   }, [tableId])
 
   const sendAction = (type: string, amount?: number) => {
@@ -147,7 +148,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
             </span>
           )}
         </div>
-        {joined && <button onClick={leaveTable} className="btn-danger text-sm py-1 px-3">Выйти</button>}
+        {!!myPlayer && <button onClick={leaveTable} className="btn-danger text-sm py-1 px-3">Выйти</button>}
       </div>
 
       {/* Community cards */}
@@ -174,7 +175,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
               <span className="text-xs text-gray-400">{player.stackRub} ₽</span>
             </div>
             <div className="flex gap-1">
-              {player.holeCards.map((c, i) => <CardDisplay key={i} cardIdx={c} />)}
+              {player.holeCards.map((c, i) => <CardDisplay key={c === -1 ? `hidden-${i}` : c} cardIdx={c} />)}
             </div>
             {player.currentBet > 0 && (
               <p className="text-xs text-yellow-400 mt-1">Ставка: {player.currentBet} ₽</p>
@@ -187,7 +188,7 @@ export default function PokerTable({ tableId }: { tableId: string }) {
 
       {/* Actions */}
       <div className="card space-y-3">
-        {!joined ? (
+        {!myPlayer ? (
           <button onClick={joinTable} className="btn-primary w-full py-3">
             🃏 Войти за стол
           </button>
