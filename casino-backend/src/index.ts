@@ -5,6 +5,9 @@ import { env } from './config/env'
 import { prisma } from './config/prisma'
 import { redis } from './config/redis'
 import { startTronWatcher } from './services/tronWatcher.service'
+import { createSocketServer } from './socket/index'
+import { registerCrashHandler } from './socket/crash.handler'
+import { registerPokerHandler } from './socket/poker.handler'
 
 async function main() {
   await redis.connect()
@@ -12,6 +15,10 @@ async function main() {
 
   const app = createApp()
   const httpServer = createServer(app)
+  const io = createSocketServer(httpServer)
+
+  registerCrashHandler(io)
+  registerPokerHandler(io)
 
   httpServer.listen(env.PORT, () => {
     console.log(`Backend running on http://localhost:${env.PORT}`)

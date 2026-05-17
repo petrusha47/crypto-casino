@@ -50,6 +50,7 @@ export interface WinLine {
   symbol: number
   count: number
   multiplier: number
+  [key: string]: unknown
 }
 
 export interface SpinResult {

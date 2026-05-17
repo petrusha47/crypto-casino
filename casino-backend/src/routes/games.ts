@@ -61,7 +61,7 @@ gamesRouter.post('/slots/spin', requireAuth, async (req, res) => {
       serverSeed,
       clientSeed,
       nonce,
-      result: { reels: result.reels, lines: result.lines, winMultiplier: result.winMultiplier },
+      result: JSON.parse(JSON.stringify({ reels: result.reels, lines: result.lines, winMultiplier: result.winMultiplier })),
     },
   })
 
