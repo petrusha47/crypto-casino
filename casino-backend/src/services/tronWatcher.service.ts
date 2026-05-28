@@ -1,7 +1,9 @@
 import axios from 'axios'
+import { TronWeb } from 'tronweb'
 import { redis } from '../config/redis'
 import { env } from '../config/env'
-import { getAllDepositAddresses } from './wallet.service'
+import { prisma } from '../config/prisma'
+import { getAllDepositAddresses, decryptPrivateKey } from './wallet.service'
 import { getUsdToRubRate } from './cbr.service'
 import { creditBalance } from './balance.service'
 import { BalanceTxType } from '@prisma/client'
@@ -12,6 +14,8 @@ const MIN_CONFIRMATIONS_MS = 18_000
 const MIN_DEPOSIT_USDT = 1
 const POLL_INTERVAL_MS = 10_000
 const PROCESSED_KEY_TTL = 30 * 24 * 3600
+const TRX_FOR_FEES = 5_000_000    // 5 TRX in sun units
+const SWEEP_WAIT_MS = 3_000
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -58,6 +62,11 @@ export async function processDeposit(params: DepositParams): Promise<void> {
   })
 
   await markProcessed(txHash)
+
+  await prisma.depositAddress.updateMany({
+    where: { userId },
+    data: { pendingSweep: true },
+  })
 }
 
 async function runPoll(): Promise<void> {
@@ -109,4 +118,71 @@ interface TRC20Tx {
   block_timestamp: number
   from: string
   to: string
+}
+
+export async function sweepDeposit(addr: {
+  userId: string
+  trc20Address: string
+  encryptedKey: string
+}): Promise<void> {
+  if (!env.HOT_WALLET_ADDRESS || !env.TRX_RESERVE_KEY) {
+    console.warn('TronWatcher sweep: HOT_WALLET_ADDRESS or TRX_RESERVE_KEY not configured, skipping')
+    return
+  }
+
+  const headers: Record<string, string> = {}
+  if (env.TRONGRID_API_KEY) headers['TRON-PRO-API-KEY'] = env.TRONGRID_API_KEY
+
+  const { data } = await axios.get(
+    `https://api.trongrid.io/v1/accounts/${addr.trc20Address}`,
+    { headers, timeout: 8000 },
+  )
+  const trc20List: Record<string, string>[] = data.data?.[0]?.trc20 ?? []
+  const usdtEntry = trc20List.find(b => Object.keys(b)[0] === USDT_CONTRACT)
+  const rawBalance = BigInt(usdtEntry ? Object.values(usdtEntry)[0] : '0')
+  const amountUsdt = Number(rawBalance) / Math.pow(10, USDT_DECIMALS)
+
+  if (amountUsdt < MIN_DEPOSIT_USDT) {
+    await prisma.depositAddress.update({
+      where: { trc20Address: addr.trc20Address },
+      data: { pendingSweep: false },
+    })
+    console.log(`TronWatcher sweep: dust (${amountUsdt} USDT) at ${addr.trc20Address}, clearing flag`)
+    return
+  }
+
+  const reserveWeb = new TronWeb({
+    fullHost: 'https://api.trongrid.io',
+    headers: env.TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': env.TRONGRID_API_KEY } : {},
+    privateKey: env.TRX_RESERVE_KEY,
+  })
+  await reserveWeb.trx.sendTransaction(addr.trc20Address, TRX_FOR_FEES)
+
+  await new Promise(resolve => setTimeout(resolve, SWEEP_WAIT_MS))
+
+  const depositWeb = new TronWeb({
+    fullHost: 'https://api.trongrid.io',
+    headers: env.TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': env.TRONGRID_API_KEY } : {},
+    privateKey: decryptPrivateKey(addr.encryptedKey),
+  })
+
+  const { transaction } = await depositWeb.transactionBuilder.triggerSmartContract(
+    USDT_CONTRACT,
+    'transfer(address,uint256)',
+    { feeLimit: 10_000_000 },
+    [
+      { type: 'address', value: env.HOT_WALLET_ADDRESS },
+      { type: 'uint256', value: rawBalance.toString() },
+    ],
+    addr.trc20Address,
+  )
+  const signed = await depositWeb.trx.sign(transaction)
+  const result = await depositWeb.trx.sendRawTransaction(signed)
+  if (!result.result) throw new Error(`USDT sweep failed: ${JSON.stringify(result)}`)
+
+  await prisma.depositAddress.update({
+    where: { trc20Address: addr.trc20Address },
+    data: { pendingSweep: false },
+  })
+  console.log(`TronWatcher sweep: ${amountUsdt} USDT swept from ${addr.trc20Address} to hot wallet`)
 }
