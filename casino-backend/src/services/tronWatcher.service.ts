@@ -3,7 +3,7 @@ import { TronWeb } from 'tronweb'
 import { redis } from '../config/redis'
 import { env } from '../config/env'
 import { prisma } from '../config/prisma'
-import { getAllDepositAddresses, decryptPrivateKey } from './wallet.service'
+import { getAllDepositAddresses, getPendingSweepAddresses, decryptPrivateKey } from './wallet.service'
 import { getUsdToRubRate } from './cbr.service'
 import { creditBalance } from './balance.service'
 import { BalanceTxType } from '@prisma/client'
@@ -74,6 +74,13 @@ async function runPoll(): Promise<void> {
     const addresses = await getAllDepositAddresses()
     await Promise.allSettled(addresses.map(({ userId, trc20Address }) =>
       checkAddress(userId, trc20Address)
+    ))
+
+    const pending = await getPendingSweepAddresses()
+    await Promise.allSettled(pending.map(addr =>
+      sweepDeposit(addr).catch(err =>
+        console.error(`TronWatcher sweep error for ${addr.trc20Address}:`, err)
+      )
     ))
   } catch (err) {
     console.error('TronWatcher poll error:', err)
