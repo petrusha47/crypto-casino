@@ -59,7 +59,7 @@ describe('getPendingSweepAddresses', () => {
     await prisma.depositAddress.create({
       data: {
         userId: testUserId,
-        trc20Address: `T${testUserId.replace(/-/g, '').slice(0, 33)}`,
+        trc20Address: `T${testUserId.replace(/[^a-zA-Z0-9]/g, '0').padEnd(33, '0').slice(0, 33)}`,
         encryptedKey: encryptPrivateKey('a'.repeat(64)),
         pendingSweep: true,
       },
@@ -68,14 +68,15 @@ describe('getPendingSweepAddresses', () => {
     const result = await getPendingSweepAddresses()
     const match = result.find(a => a.userId === testUserId)
     expect(match).toBeDefined()
-    expect(match).toHaveProperty('encryptedKey')
+    expect(match?.trc20Address).toBe(`T${testUserId.replace(/[^a-zA-Z0-9]/g, '0').padEnd(33, '0').slice(0, 33)}`)
+    expect(match?.encryptedKey).toBeTruthy()
   })
 
   it('does not return addresses where pendingSweep is false', async () => {
     await prisma.depositAddress.create({
       data: {
         userId: testUserId,
-        trc20Address: `T${testUserId.replace(/-/g, '').slice(0, 33)}`,
+        trc20Address: `T${testUserId.replace(/[^a-zA-Z0-9]/g, '0').padEnd(33, '0').slice(0, 33)}`,
         encryptedKey: encryptPrivateKey('a'.repeat(64)),
         pendingSweep: false,
       },

@@ -63,7 +63,7 @@ export async function getAllDepositAddresses(): Promise<{ userId: string; trc20A
   return prisma.depositAddress.findMany({ select: { userId: true, trc20Address: true } })
 }
 
-export async function getPendingSweepAddresses(): Promise<{ userId: string; trc20Address: string; encryptedKey: string }[]> {
+export async function getPendingSweepAddresses() {
   return prisma.depositAddress.findMany({
     where: { pendingSweep: true },
     select: { userId: true, trc20Address: true, encryptedKey: true },
