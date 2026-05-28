@@ -30,11 +30,12 @@ model User {
 }
 
 model DepositAddress {
-  id           String @id @default(cuid())
-  userId       String @unique
-  trc20Address String @unique
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  trc20Address String  @unique
   encryptedKey String
-  user         User   @relation(fields: [userId], references: [id])
+  pendingSweep Boolean @default(false)
+  user         User    @relation(fields: [userId], references: [id])
 }
 
 model BalanceTransaction {

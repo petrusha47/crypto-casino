@@ -11,6 +11,8 @@ const envSchema = z.object({
   TRONGRID_API_KEY: z.string().default(''),
   TELEGRAM_BOT_TOKEN: z.string().default(''),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  HOT_WALLET_ADDRESS: z.string().default(''),
+  TRX_RESERVE_KEY: z.string().default(''),
 })
 
 export const env = envSchema.parse(process.env)
