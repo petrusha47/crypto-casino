@@ -1,8 +1,0 @@
-providers = ["node"]
-
-[variables]
-NODE_VERSION = "20"
-
-[phases.install]
-cmds = ["npm ci"]
-cacheDirectories = ["/root/.npm"]
