@@ -10,9 +10,6 @@ import { registerCrashHandler } from './socket/crash.handler'
 import { registerPokerHandler } from './socket/poker.handler'
 
 async function main() {
-  await redis.connect()
-  await prisma.$connect()
-
   const app = createApp()
   const httpServer = createServer(app)
   const io = createSocketServer(httpServer)
@@ -20,13 +17,20 @@ async function main() {
   registerCrashHandler(io)
   registerPokerHandler(io)
 
-  httpServer.listen(env.PORT, () => {
-    console.log(`Backend running on http://localhost:${env.PORT}`)
-    if (env.NODE_ENV !== 'test') {
-      startTronWatcher()
-      console.log('TronWatcher: polling TronGrid every 10s')
-    }
+  await new Promise<void>(resolve => {
+    httpServer.listen(env.PORT, () => {
+      console.log(`Backend running on port ${env.PORT}`)
+      resolve()
+    })
   })
+
+  await redis.connect()
+  await prisma.$connect()
+
+  if (env.NODE_ENV !== 'test') {
+    startTronWatcher()
+    console.log('TronWatcher: polling TronGrid every 10s')
+  }
 }
 
 main().catch(console.error)
