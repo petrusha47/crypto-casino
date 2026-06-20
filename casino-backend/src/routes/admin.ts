@@ -304,3 +304,52 @@ adminRouter.delete('/tables/:id', requireRole(...ADMIN_ONLY), async (req, res) =
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+// DELETE /api/admin/users/:id — ADMIN only
+adminRouter.delete('/users/:id', requireRole(...ADMIN_ONLY), async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.params.id } })
+    res.status(204).send()
+  } catch (err) {
+    console.error('Admin user delete error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/admin/transactions?page=1&type= — ADMIN + SUPPORT
+adminRouter.get('/transactions', requireRole(...ADMIN_SUPPORT), async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const type = req.query.type as string | undefined
+    const pageSize = 50
+    const where = type ? { type: type as BalanceTxType } : {}
+
+    const [txns, total] = await Promise.all([
+      prisma.balanceTransaction.findMany({
+        where,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { username: true, email: true } } },
+      }),
+      prisma.balanceTransaction.count({ where }),
+    ])
+
+    res.json({
+      txns: txns.map(t => ({
+        id: t.id,
+        type: t.type,
+        amountRub: Number(t.amountRub),
+        comment: t.comment,
+        createdAt: t.createdAt,
+        user: t.user,
+      })),
+      total,
+      page,
+      pageSize,
+    })
+  } catch (err) {
+    console.error('Admin transactions error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

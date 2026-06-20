@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { useAuthStore } from '@/store/auth'
 
 const NAV = [
@@ -8,11 +9,17 @@ const NAV = [
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/withdrawals', label: 'Выводы' },
   { href: '/admin/tables', label: 'Столы' },
+  { href: '/admin/transactions', label: 'Транзакции' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user)
   const pathname = usePathname()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!user || user.role === 'USER') router.replace('/auth/login')
+  }, [user, router])
 
   if (!user || user.role === 'USER') return null
 

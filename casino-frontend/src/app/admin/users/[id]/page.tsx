@@ -63,6 +63,13 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
     load()
   }
 
+  const deleteUser = async () => {
+    if (!user) return
+    if (!confirm(`Удалить пользователя ${user.username}? Это действие необратимо.`)) return
+    await api.delete(`/api/admin/users/${id}`)
+    router.push('/admin/users')
+  }
+
   const changeRole = async () => {
     await api.patch(`/api/admin/users/${id}/role`, { role: selectedRole })
     flash('Роль изменена')
@@ -98,9 +105,16 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-4">
-        <button onClick={() => router.push('/admin/users')} className="text-gray-500 hover:text-white text-sm">← Назад</button>
-        <h1 className="text-2xl font-bold text-white">{user.username}</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/admin/users')} className="text-gray-500 hover:text-white text-sm">← Назад</button>
+          <h1 className="text-2xl font-bold text-white">{user.username}</h1>
+        </div>
+        {isAdmin && (
+          <button onClick={deleteUser} className="btn-danger text-sm py-1 px-3">
+            Удалить аккаунт
+          </button>
+        )}
       </div>
 
       {msg && <p className="text-green-400 text-sm bg-green-900/20 border border-green-800 rounded px-3 py-2">{msg}</p>}

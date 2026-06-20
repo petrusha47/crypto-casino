@@ -54,6 +54,11 @@ export default function NavBar() {
           <BalanceDisplay />
           {authed ? (
             <div className="flex items-center gap-2">
+              {user?.role === 'ADMIN' && (
+                <Link href="/admin" className="text-xs px-2 py-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 font-medium transition-colors">
+                  Admin
+                </Link>
+              )}
               <Link href="/profile" className="text-sm text-gray-400 hover:text-white">
                 {user?.username}
               </Link>
