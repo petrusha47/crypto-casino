@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'https://crypto-casino-production.up.railway.app',
   withCredentials: true,
 })
 
@@ -25,7 +25,7 @@ api.interceptors.response.use(
       original._retry = true
       try {
         const r = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/api/auth/refresh`,
+          `${process.env.NEXT_PUBLIC_API_URL ?? 'https://crypto-casino-production.up.railway.app'}/api/auth/refresh`,
           {},
           { withCredentials: true },
         )
